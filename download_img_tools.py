@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
-# @BAAI zhaoshuai@baai.ac.cn
+# Email: xuezhao@baai.ac.cn or zhaoshuai@baai.ac.cn
+# Author: XueZhao
 
 import os
 import sys
@@ -14,9 +15,13 @@ import hashlib
 root_path=sys.path[0]
 ssl._create_default_https_context = ssl._create_unverified_context
 '''
-    read json file and download all link's image tools
+    This is a download tool for WuDaoMM dataset. It will download all images from the json file.
+    The following two parameters 'img_json_folder' and "crawl_speed" should be set before running.
 '''
-img_json_folder = 'img_jsons'
+###################################################### Setting ##########################################################
+img_json_folder = 'WuDaoMM-base' # WuDaoMM json dir
+crawl_speed = 30                 # http request speed per second; depend on local computer bandwidth.
+########################################################################################################################
 
 def average_split_task(task_list, each_task_count):
     return [task_list[i:i+each_task_count] for i in range(len(task_list)) if i%each_task_count==0]
@@ -227,8 +232,12 @@ if __name__ == '__main__':
             now_task_list = json.loads(task_file.read())
             done_ukey = set([y.replace('.jpg', '').strip() for y in os.listdir(now_save_folder_path)])
             not_crawl_list = [(now_save_folder_path, each_img_msg) for each_img_msg in now_task_list if make_ukey((each_img_msg['tag']+each_img_msg['url']+each_img_msg['captions'])) not in done_ukey]
-    all_small_task = average_split_task(not_crawl_list, 350)
+    all_small_task = average_split_task(not_crawl_list, crawl_speed)
     for each_small_task in all_small_task:
-        asyncio.run(main(each_small_task))
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(main(each_small_task))
+        except:
+            pass
     print("over_time:" + show_time())
     print("="*100)
