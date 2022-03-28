@@ -20,8 +20,8 @@ ssl._create_default_https_context = ssl._create_unverified_context
 '''
 ###################################################### Setting ##########################################################
 img_json_folder = 'WuDaoMM-base' # WuDaoMM json dir
-crawl_speed = 30                 # http request speed per second; depend on local computer bandwidth.
-########################################################################################################################
+crawl_speed = 2                  # http request speed per second; depend on local computer bandwidth.
+#########################################################################################################################
 
 def average_split_task(task_list, each_task_count):
     return [task_list[i:i+each_task_count] for i in range(len(task_list)) if i%each_task_count==0]
@@ -171,7 +171,11 @@ def show_time():
 
 async def touch_file(session, img_msg):
     file_save_full_path = img_msg[0]
-    file_url = img_msg[1]['url']
+    file_url_temp = img_msg[1]['url']
+    if 'dpic.' in file_url_temp:
+        file_url = file_url_temp.replace('dpic.', 'pic.').replace('tiankong', 'quanjing')
+    else:
+        file_url = file_url_temp
     try:
         image_ukey = make_ukey(img_msg[1]['tag']+file_url+img_msg[1]['captions'])
     except:
@@ -180,7 +184,7 @@ async def touch_file(session, img_msg):
         image_name = image_ukey+'.jpg'
         file_ok_path = os.path.join(file_save_full_path, image_name)
         try:
-            async with session.get(file_url, headers=change_ua(), timeout=1, verify_ssl=False) as res:
+            async with session.get(file_url, headers=change_ua(), timeout=8, verify_ssl=False) as res:
                 file_content = await res.content.read()
                 with open(file_ok_path,'wb') as files:
                     files.write(file_content)
@@ -189,7 +193,7 @@ async def touch_file(session, img_msg):
                 print('='*100)
         except asyncio.TimeoutError:
             try:
-                async with session.get(file_url, headers=change_ua(), timeout=1, verify_ssl=False) as res:
+                async with session.get(file_url, headers=change_ua(), timeout=8, verify_ssl=False) as res:
                     file_content = await res.content.read()
                     with open(file_ok_path,'wb') as files:
                         files.write(file_content)
@@ -198,7 +202,7 @@ async def touch_file(session, img_msg):
                     print('='*100)
             except asyncio.TimeoutError:
                 try:
-                    async with session.get(file_url, headers=change_ua(), timeout=3, verify_ssl=False) as res:
+                    async with session.get(file_url, headers=change_ua(), timeout=8, verify_ssl=False) as res:
                         file_content = await res.content.read()
                         with open(file_ok_path,'wb') as files:
                             files.write(file_content)
@@ -219,7 +223,8 @@ async def main(small_task_list):
 
 if __name__ == '__main__':
 
-    not_crawl_list = []
+    all_task_list = []
+    done_ukey_list_temp = []
     print('start_time:' + show_time())
     base_path = os.path.join(root_path, img_json_folder)
     all_json_files = os.listdir(base_path)
@@ -230,8 +235,10 @@ if __name__ == '__main__':
         json_full_path = os.path.join(base_path, each_json_file)
         with open(json_full_path, 'r', encoding='utf8') as task_file:
             now_task_list = json.loads(task_file.read())
-            done_ukey = set([y.replace('.jpg', '').strip() for y in os.listdir(now_save_folder_path)])
-            not_crawl_list = [(now_save_folder_path, each_img_msg) for each_img_msg in now_task_list if make_ukey((each_img_msg['tag']+each_img_msg['url']+each_img_msg['captions'])) not in done_ukey]
+            done_ukey_list_temp += [y.replace('.jpg', '').strip() for y in os.listdir(now_save_folder_path)]
+            all_task_list += [(now_save_folder_path, each_img_msg) for each_img_msg in now_task_list]
+    done_ukey_list = set([each_ukey for each_ukey in done_ukey_list_temp if len(each_ukey)>0])
+    not_crawl_list = [each_task for each_task in all_task_list if make_ukey((each_task[1]['tag']+each_task[1]['url']+each_task[1]['captions'])) not in done_ukey_list]
     all_small_task = average_split_task(not_crawl_list, crawl_speed)
     for each_small_task in all_small_task:
         try:
