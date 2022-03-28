@@ -177,7 +177,7 @@ async def touch_file(session, img_msg):
     else:
         file_url = file_url_temp
     try:
-        image_ukey = make_ukey(img_msg[1]['tag']+file_url+img_msg[1]['captions'])
+        image_ukey = make_ukey(img_msg[1]['tag']+file_url_temp+img_msg[1]['captions'])
     except:
         image_ukey = ''
     if len(image_ukey)>1:
